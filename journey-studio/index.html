@@ -315,6 +315,26 @@ body:not(.dark-mode) .station-subtrack-editor .subname{color:#30214d}
 .stop-main{padding-top:13px!important}
 .stop-main .map-thumb{margin-top:9px!important}
 @media(max-width:620px){.station-thumb{width:44px;height:44px}.map-thumb{height:58px}}
+
+/* FINAL FIX: card footer controls share one stable row; never float over text */
+.stop-card{display:flex!important;flex-direction:column!important;justify-content:space-between!important}
+.stop-main{position:relative!important;display:block!important;flex:1 1 auto!important;width:100%!important;height:auto!important;min-height:0!important;padding:13px 14px 8px!important}
+.stop-main strong{margin:8px 0 5px!important}
+.stop-main .map-thumb{height:52px!important;margin:7px 0 7px!important}
+.stop-description{min-height:0!important}
+.stop-bottom{position:relative!important;inset:auto!important;display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-width:0!important;margin:0 12px 10px!important;padding:8px 0 0!important;border-top:1px solid #ffffff18!important;white-space:nowrap!important}
+.stop-bottom>span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:8px!important;letter-spacing:.07em!important}
+.track-actions{position:static!important;inset:auto!important;display:flex!important;flex:0 0 auto!important;flex-direction:row!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;width:auto!important;height:29px!important;padding:0!important;margin:0!important}
+.track-actions .track-done-btn,.track-actions .expand-mark{position:static!important;display:grid!important;place-items:center!important;flex:none!important;width:29px!important;height:29px!important;min-width:29px!important;margin:0!important;transform:none!important;border-radius:9px!important}
+.track-actions .track-done-btn{border:1.5px solid #b8a8dc!important;background:#ffffff0c!important;color:#e9ddff!important;font-size:13px!important}
+.track-actions .track-done-btn.is-done{background:#54d9b0!important;border-color:#9affdf!important;color:#123b35!important}
+.track-actions .expand-mark{border:1px solid #ffffff20!important;background:#ffffff13!important;color:#f5edff!important}
+.subtrack-panel{height:220px!important;min-height:220px!important;max-height:220px!important;overflow:hidden!important}
+.subpanel-body{display:block!important;flex:1 1 auto!important;min-height:0!important;height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
+.subpanel-body .inline-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-content:start!important;gap:7px!important}
+.subpanel-body .inline-sub{min-height:38px!important}
+@media(max-width:900px){.subtrack-panel{height:210px!important;min-height:210px!important;max-height:210px!important}}
+@media(max-width:620px){.stop-bottom{margin-left:9px!important;margin-right:9px!important}.stop-bottom>span{font-size:7px!important}.track-actions{gap:5px!important}.track-actions .track-done-btn,.track-actions .expand-mark{width:27px!important;height:27px!important;min-width:27px!important}}
 </style>
 </head>
 <body>
@@ -397,6 +417,12 @@ function trackThumb(name,extra=''){
  else if(n.includes('backend')||n.includes('api')){kind='backend';symbol='⌁';label='BACKEND'}
  return '<span class="track-thumb '+extra+' thumb-'+kind+'"><i class="thumb-orbit"></i><b>'+symbol+'</b><small>'+label+'</small></span>';
 }
+function updateJourneyProgress(){
+ const n=data.stations.length,done=data.stations.filter(s=>s.status==='done').length,pct=n?Math.round(done/n*100):0;
+ $('percent').innerHTML=pct+'<span>%</span>';$('barFill').style.width=pct+'%';
+ $('doneCount').textContent=done;$('totalCount').textContent=n;$('remainingCount').textContent=n-done;
+ $('stopCount').textContent=n+' STOPS';
+}
 function render(){
  const n=data.stations.length,done=data.stations.filter(s=>s.status==='done').length,pct=n?Math.round(done/n*100):0;
  $('journeyTitle').innerHTML=esc(data.title).replace(/\n/g,'<br>');
@@ -421,7 +447,7 @@ function drawMap(){
  host.innerHTML=data.stations.map((s,i)=>{
   s.subtracks=s.subtracks||[];const isOpen=s.id===selectedTrackId,subDone=s.subtracks.filter(x=>x.done).length;
   const status=s.status==='done'?'COMPLETED':s.status==='active'?'IN PROGRESS':'UP NEXT';
-  return '<article class="map-stop '+s.status+(isOpen?' expanded':'')+'" data-stop="'+esc(s.id)+'"><div class="stop-connector"></div><div class="stop-node-wrap"><span class="stop-node">'+(s.status==='done'?'✓':String(i+1).padStart(2,'0'))+'</span></div><div class="stop-card"><button class="stop-main" data-expand="'+esc(s.id)+'" aria-expanded="'+isOpen+'"><span class="stop-meta"><span>TRACK '+String(i+1).padStart(2,'0')+'</span><span class="status-label">'+status+'</span></span>'+trackThumb(s.name,'map-thumb')+'<strong>'+esc(s.name)+'</strong><span class="stop-description">'+esc(s.desc||'A new milestone on your journey')+'</span><span class="stop-bottom"><span>'+s.subtracks.length+' SUBTRACKS · '+subDone+'/'+s.subtracks.length+' DONE</span></span></button><div class="track-actions"><button type="button" class="track-done-btn '+(s.status==='done'?'is-done':'')+'" data-toggle-track="'+esc(s.id)+'" aria-label="Mark '+esc(s.name)+' '+(s.status==='done'?'not done':'done')+'" title="Toggle completion"></button><button type="button" class="expand-mark" data-expand="'+esc(s.id)+'" aria-label="Open subtracks">'+(isOpen?'−':'＋')+'</button></div></div></article>'
+  return '<article class="map-stop '+s.status+(isOpen?' expanded':'')+'" data-stop="'+esc(s.id)+'"><div class="stop-connector"></div><div class="stop-node-wrap"><span class="stop-node">'+(s.status==='done'?'✓':String(i+1).padStart(2,'0'))+'</span></div><div class="stop-card"><button class="stop-main" data-expand="'+esc(s.id)+'" aria-expanded="'+isOpen+'"><span class="stop-meta"><span>TRACK '+String(i+1).padStart(2,'0')+'</span><span class="status-label">'+status+'</span></span>'+trackThumb(s.name,'map-thumb')+'<strong>'+esc(s.name)+'</strong><span class="stop-description">'+esc(s.desc||'A new milestone on your journey')+'</span></button><div class="stop-bottom"><span>'+s.subtracks.length+' SUBTRACKS · '+subDone+'/'+s.subtracks.length+' DONE</span><div class="track-actions"><button type="button" class="track-done-btn '+(s.status==='done'?'is-done':'')+'" data-toggle-track="'+esc(s.id)+'" aria-label="Mark '+esc(s.name)+' '+(s.status==='done'?'not done':'done')+'" title="Toggle completion">'+(s.status==='done'?'✓':'')+'</button><button type="button" class="expand-mark" data-expand="'+esc(s.id)+'" aria-label="Open subtracks">'+(isOpen?'−':'＋')+'</button></div></div></div></article>'
  }).join('');
  const active=data.stations.find(s=>s.id===selectedTrackId);
  if(!active){panel.innerHTML='<div class="subpanel-empty">✦ Select a track above. Its subtracks will appear here without moving the other tracks.</div>';}
@@ -441,7 +467,7 @@ function drawMap(){
   if(btn.dataset.subup!==undefined||btn.dataset.subdown!==undefined){const k=+(btn.dataset.subup??btn.dataset.subdown),n=btn.dataset.subup!==undefined?k-1:k+1;if(n>=0&&n<s.subtracks.length){[s.subtracks[k],s.subtracks[n]]=[s.subtracks[n],s.subtracks[k]];await save();drawMap()}return}
  };
  host.onclick=handleClick;panel.onclick=handleClick;
- panel.onchange=async e=>{const input=e.target.closest('[data-subtoggle]');if(!input)return;const s=data.stations.find(x=>x.id===selectedTrackId),sub=s&&s.subtracks[+input.dataset.subtoggle];if(!sub)return;sub.done=input.checked;if(s.subtracks.length&&s.subtracks.every(x=>x.done))s.status='done';else if(s.status==='done')s.status='active';await save();render()};
+ panel.onchange=async e=>{const input=e.target.closest('[data-subtoggle]');if(!input)return;const s=data.stations.find(x=>x.id===selectedTrackId),sub=s&&s.subtracks[+input.dataset.subtoggle];if(!sub)return;const body=panel.querySelector('.subpanel-body'),scrollTop=body?body.scrollTop:0;sub.done=input.checked;if(s.subtracks.length&&s.subtracks.every(x=>x.done))s.status='done';else if(s.status==='done')s.status='active';await save();drawMap();const nextBody=panel.querySelector('.subpanel-body');if(nextBody)nextBody.scrollTop=scrollTop;updateJourneyProgress()};
  panel.onsubmit=async e=>{const form=e.target.closest('[data-add-form]');if(!form)return;e.preventDefault();const s=data.stations.find(x=>x.id===form.dataset.addForm),input=form.elements.subtrack,title=input.value.trim();if(!title)return;s.subtracks=s.subtracks||[];s.subtracks.push({id:crypto.randomUUID(),title,done:false});await save();drawMap()};
 }
 function openStation(id){editingId=id;const s=data.stations.find(x=>x.id===id);$('stationDialogTitle').textContent='Station details ✦';$('stationName').value=s.name;$('stationDesc').value=s.desc||'';$('stationTasks').value=(s.tasks||[]).join('\n');$('stationLink').value=s.link||'';$('stationStatus').value=s.status;$('stationFiles').value='';$('deleteStation').style.display='inline-block';showFiles(s);s.subtracks=s.subtracks||[];renderSubtracks(s);$('insertBefore').style.display='inline-block';$('insertAfter').style.display='inline-block';$('stationDialog').showModal()}
