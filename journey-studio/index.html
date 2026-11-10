@@ -170,6 +170,52 @@ body:not(.dark-mode) .starfield{background-position:0 0!important;animation:star
 .avatar{background:linear-gradient(135deg,#ffbd69,#ff6fb1 55%,#9b7aff)!important;box-shadow:0 6px 18px #9b65ef38!important}
 .railbottom{color:#ffe08a!important;font-size:22px!important}
 body.dark-mode .railbottom{color:#e9e2ff!important}
+
+/* SKY MOTION — stars and tiny suns visibly drift down the page */
+.starfield{
+ position:fixed!important;inset:-300px 0 0!important;
+ background-position:0 0!important;
+ animation:tracklineStarFall 28s linear infinite!important;
+ will-change:background-position!important;
+}
+@keyframes tracklineStarFall{
+ from{background-position:0 0}
+ to{background-position:0 810px}
+}
+body:not(.dark-mode) .starfield{
+ background-image:
+ radial-gradient(2px 2px at 8% 18%,#f3bd36 99%,transparent),
+ radial-gradient(1.5px 1.5px at 22% 72%,#e9a927 99%,transparent),
+ radial-gradient(2px 2px at 38% 34%,#ffd45a 99%,transparent),
+ radial-gradient(1.5px 1.5px at 54% 83%,#e8b83d 99%,transparent),
+ radial-gradient(2px 2px at 72% 22%,#f3bd36 99%,transparent),
+ radial-gradient(1.5px 1.5px at 88% 61%,#e9a927 99%,transparent)!important;
+ background-size:310px 270px!important;
+ animation:tracklineSunFall 32s linear infinite!important;
+}
+@keyframes tracklineSunFall{
+ from{background-position:0 -270px}
+ to{background-position:0 810px}
+}
+/* Distinct little sunbursts drift down in light mode, separate from the golden dots. */
+body:not(.dark-mode) .starfield:before,
+body:not(.dark-mode) .starfield:after{
+ content:"☼";position:absolute;display:block;pointer-events:none;
+ color:#e8ae2d;font-family:Arial,sans-serif;font-weight:700;
+ font-size:15px;line-height:1;text-shadow:0 0 9px #f5ca5b99;
+ animation:tracklineSunGlyphFall 19s linear infinite;
+}
+body:not(.dark-mode) .starfield:before{left:17%;top:-35px}
+body:not(.dark-mode) .starfield:after{left:76%;top:-210px;font-size:12px;animation-duration:25s;animation-delay:-8s;color:#f0bf48}
+@keyframes tracklineSunGlyphFall{
+ 0%{transform:translate3d(0,0,0) rotate(0deg);opacity:0}
+ 8%{opacity:.8}
+ 88%{opacity:.75}
+ 100%{transform:translate3d(24px,125vh,0) rotate(150deg);opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+ .starfield,.starfield:before,.starfield:after{animation:none!important}
+}
 </style>
 </head>
 <body>
