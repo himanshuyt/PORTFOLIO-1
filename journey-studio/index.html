@@ -123,7 +123,8 @@ function makeDsaRoadmap(){return {id:'dsa-backend-roadmap',title:'DSA & Backend 
 {name:'Build & launch',desc:'Turn your knowledge into deployed projects.',tasks:['Build an app','Add tests','Deploy it'],status:'upcoming',link:'',files:[],subtracks:['Choose a project','Plan features','Build frontend and backend','Connect a database','Test the application','Deploy and document'].map(title=>({id:crypto.randomUUID(),title,done:false}))},
 {name:'Internship destination',desc:'Turn the work into an opportunity.',tasks:['Polish resume','Apply','Interview prep'],status:'upcoming',link:'',files:[],subtracks:['Resume and GitHub cleanup','Portfolio projects','Find internship roles','Apply consistently','DSA interview practice','Mock interviews'].map(title=>({id:crypto.randomUUID(),title,done:false}))}
 ],uploads:[]}}
-\nlet roadmaps=[],activeRoadmapId=null;
+
+let roadmaps=[],activeRoadmapId=null;
 function copySnapshot(x){return JSON.parse(JSON.stringify(x))}
 function storeActiveRoadmap(){if(!activeRoadmapId)return;const i=roadmaps.findIndex(r=>r.id===activeRoadmapId);if(i>=0)roadmaps[i]={...copySnapshot(data),id:activeRoadmapId}}
 function renderRoadmapSelect(){const el=$('roadmapSelect');if(!el)return;el.innerHTML=roadmaps.map(r=>'<option value="'+esc(r.id)+'" '+(r.id===activeRoadmapId?'selected':'')+'>'+esc(r.title)+'</option>').join('');el.value=activeRoadmapId||''}
@@ -165,7 +166,8 @@ function drawMap(){
  }).join('');
  host.onclick=async e=>{
   const btn=e.target.closest('button');if(!btn)return;
-  if(btn.dataset.toggleTrack){const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?'upcoming':'done';await save();render()}return}\n  if(btn.dataset.expand){selectedTrackId=selectedTrackId===btn.dataset.expand?null:btn.dataset.expand;drawMap();return}
+  if(btn.dataset.toggleTrack){const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?'upcoming':'done';await save();render()}return}
+  if(btn.dataset.expand){selectedTrackId=selectedTrackId===btn.dataset.expand?null:btn.dataset.expand;drawMap();return}
   if(btn.dataset.editTrack){openStation(btn.dataset.editTrack);return}
   if(btn.dataset.insertBefore||btn.dataset.insertAfter){const id=btn.dataset.insertBefore||btn.dataset.insertAfter,idx=data.stations.findIndex(x=>x.id===id);insertAtIndex(idx+(btn.dataset.insertAfter?1:0));return}
   const card=btn.closest('[data-stop]'),s=card&&data.stations.find(x=>x.id===card.dataset.stop);if(!s)return;
