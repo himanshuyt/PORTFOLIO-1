@@ -453,7 +453,7 @@ function drawMap(){
  if(!active){panel.innerHTML='<div class="subpanel-empty">✦ Select a track above. Its subtracks will appear here without moving the other tracks.</div>';}
  else{
   const subs=active.subtracks||[];
-  panel.innerHTML='<div class="subpanel-head"><div><b>✦ '+esc(active.name)+' · Subtracks</b><small>'+subs.filter(x=>x.done).length+' of '+subs.length+' completed · '+subs.length+' steps</small></div><button class="edit-track" data-edit-track="'+esc(active.id)+'">Edit track ↗</button></div><div class="subpanel-body"><div class="inline-list">'+(subs.length?subs.map((x,j)=>'<div class="inline-sub"><label class="sub-check '+(x.done?'is-done':'')+'"><input type="checkbox" data-subtoggle="'+j+'" '+(x.done?'checked':'')+'><span class="fake-check">'+(x.done?'✓':'')+'</span><span class="sub-title">'+esc(x.title)+'</span></label><div class="sub-actions"><button data-subup="'+j+'" title="Move up" '+(j===0?'disabled':'')+'>↑</button><button data-subdown="'+j+'" title="Move down" '+(j===subs.length-1?'disabled':'')+'>↓</button><button data-subedit="'+j+'" title="Rename">✎</button><button data-subdel="'+j+'" title="Delete">×</button></div></div>').join(''):'<div class="inline-empty">No subtracks yet.</div>')+'</div><form class="inline-add" data-add-form="'+esc(active.id)+'"><input name="subtrack" maxlength="80" placeholder="Add a subtrack…" autocomplete="off"><button type="submit">＋ Add step</button></form><div class="inline-track-actions"><button data-insert-before="'+esc(active.id)+'">＋ Insert track before</button><button data-insert-after="'+esc(active.id)+'">＋ Insert track after</button></div></div>';
+  panel.innerHTML='<div class="subpanel-head"><div><b>✦ '+esc(active.name)+' · Subtracks</b><small>'+subs.filter(x=>x.done).length+' of '+subs.length+' completed · '+subs.length+' steps</small></div><button class="edit-track" data-edit-track="'+esc(active.id)+'">Edit track ↗</button></div><div class="subpanel-body"><div class="inline-list">'+(subs.length?subs.map((x,j)=>'<div class="inline-sub" data-subrow="'+j+'"><label class="sub-check '+(x.done?'is-done':'')+'"><input type="checkbox" data-subtoggle="'+j+'" data-parent-track="'+esc(active.id)+'" '+(x.done?'checked':'')+'><span class="fake-check">'+(x.done?'✓':'')+'</span><span class="sub-title">'+esc(x.title)+'</span></label><div class="sub-actions"><button data-subup="'+j+'" title="Move up" '+(j===0?'disabled':'')+'>↑</button><button data-subdown="'+j+'" title="Move down" '+(j===subs.length-1?'disabled':'')+'>↓</button><button data-subedit="'+j+'" title="Rename">✎</button><button data-subdel="'+j+'" title="Delete">×</button></div></div>').join(''):'<div class="inline-empty">No subtracks yet.</div>')+'</div><form class="inline-add" data-add-form="'+esc(active.id)+'"><input name="subtrack" maxlength="80" placeholder="Add a subtrack…" autocomplete="off"><button type="submit">＋ Add step</button></form><div class="inline-track-actions"><button data-insert-before="'+esc(active.id)+'">＋ Insert track before</button><button data-insert-after="'+esc(active.id)+'">＋ Insert track after</button></div></div>';
  }
  const handleClick=async e=>{
   const btn=e.target.closest('button');if(!btn)return;
@@ -467,7 +467,26 @@ function drawMap(){
   if(btn.dataset.subup!==undefined||btn.dataset.subdown!==undefined){const k=+(btn.dataset.subup??btn.dataset.subdown),n=btn.dataset.subup!==undefined?k-1:k+1;if(n>=0&&n<s.subtracks.length){[s.subtracks[k],s.subtracks[n]]=[s.subtracks[n],s.subtracks[k]];await save();drawMap()}return}
  };
  host.onclick=handleClick;panel.onclick=handleClick;
- panel.onchange=async e=>{const input=e.target.closest('[data-subtoggle]');if(!input)return;const s=data.stations.find(x=>x.id===selectedTrackId),sub=s&&s.subtracks[+input.dataset.subtoggle];if(!sub)return;const body=panel.querySelector('.subpanel-body'),scrollTop=body?body.scrollTop:0;sub.done=input.checked;if(s.subtracks.length&&s.subtracks.every(x=>x.done))s.status='done';else if(s.status==='done')s.status='active';await save();drawMap();const nextBody=panel.querySelector('.subpanel-body');if(nextBody)nextBody.scrollTop=scrollTop;updateJourneyProgress()};
+ panel.onchange=async e=>{
+ const input=e.target.closest('input[data-subtoggle][data-parent-track]');if(!input)return;
+ const s=data.stations.find(x=>x.id===input.dataset.parentTrack);if(!s)return;
+ const sub=s.subtracks[+input.dataset.subtoggle];if(!sub)return;
+ sub.done=input.checked;
+ s.status=s.subtracks.length&&s.subtracks.every(x=>x.done)?'done':s.subtracks.some(x=>x.done)?'active':'upcoming';
+ const row=input.closest('.inline-sub'),label=input.closest('.sub-check');
+ if(label){label.classList.toggle('is-done',sub.done);const tick=label.querySelector('.fake-check');if(tick)tick.textContent=sub.done?'✓':''}
+ const done=s.subtracks.filter(x=>x.done).length;
+ const card=host.querySelector('[data-stop="'+CSS.escape(s.id)+'"]');
+ if(card){
+  card.classList.remove('done','active','upcoming');card.classList.add(s.status);
+  const statusLabel=card.querySelector('.status-label');if(statusLabel)statusLabel.textContent=s.status==='done'?'COMPLETED':s.status==='active'?'IN PROGRESS':'UP NEXT';
+  const node=card.querySelector('.stop-node');if(node)node.textContent=s.status==='done'?'✓':String(data.stations.indexOf(s)+1).padStart(2,'0');
+  const doneButton=card.querySelector('[data-toggle-track]');if(doneButton){doneButton.classList.toggle('is-done',s.status==='done');doneButton.textContent=s.status==='done'?'✓':'';doneButton.setAttribute('aria-label','Mark '+s.name+' '+(s.status==='done'?'not done':'done'))}
+  const count=card.querySelector('.stop-bottom>span');if(count)count.textContent=s.subtracks.length+' SUBTRACKS · '+done+'/'+s.subtracks.length+' DONE';
+ }
+ const heading=panel.querySelector('.subpanel-head small');if(heading)heading.textContent=done+' of '+s.subtracks.length+' completed · '+s.subtracks.length+' steps';
+ await save();updateJourneyProgress();
+};
  panel.onsubmit=async e=>{const form=e.target.closest('[data-add-form]');if(!form)return;e.preventDefault();const s=data.stations.find(x=>x.id===form.dataset.addForm),input=form.elements.subtrack,title=input.value.trim();if(!title)return;s.subtracks=s.subtracks||[];s.subtracks.push({id:crypto.randomUUID(),title,done:false});await save();drawMap()};
 }
 function openStation(id){editingId=id;const s=data.stations.find(x=>x.id===id);$('stationDialogTitle').textContent='Station details ✦';$('stationName').value=s.name;$('stationDesc').value=s.desc||'';$('stationTasks').value=(s.tasks||[]).join('\n');$('stationLink').value=s.link||'';$('stationStatus').value=s.status;$('stationFiles').value='';$('deleteStation').style.display='inline-block';showFiles(s);s.subtracks=s.subtracks||[];renderSubtracks(s);$('insertBefore').style.display='inline-block';$('insertAfter').style.display='inline-block';$('stationDialog').showModal()}
