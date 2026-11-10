@@ -265,10 +265,23 @@ body:not(.dark-mode) .starfield:after{
  body:not(.dark-mode) .starfield:before{animation-duration:13s!important}
  body:not(.dark-mode) .starfield:after{animation-duration:18s!important}
 }
+
+/* REAL FALLING PARTICLES: individual elements move with transform, not background-position */
+.starfield{position:fixed!important;inset:0!important;overflow:hidden!important;pointer-events:none!important;z-index:0!important;opacity:1!important;background:none!important;animation:none!important}
+.sky-particle{position:absolute!important;display:block!important;top:-18px!important;width:4px!important;height:4px!important;border-radius:50%!important;background:#fff!important;box-shadow:0 0 7px #fff,0 0 14px #dce8ff!important;opacity:.9!important;animation:particleDrop var(--fall-time,12s) linear var(--fall-delay,0s) infinite!important;will-change:transform!important}
+body:not(.dark-mode) .sky-particle{width:5px!important;height:5px!important;background:#ffbf16!important;box-shadow:0 0 5px #ffcf3d,0 0 12px #ffb900,0 0 20px #ffdc6a!important;opacity:1!important}
+.p1{left:4%;--fall-time:13s;--fall-delay:-8s}.p2{left:11%;--fall-time:17s;--fall-delay:-2s}.p3{left:19%;--fall-time:11s;--fall-delay:-9s}.p4{left:27%;--fall-time:15s;--fall-delay:-5s}.p5{left:34%;--fall-time:19s;--fall-delay:-13s}.p6{left:42%;--fall-time:12s;--fall-delay:-3s}.p7{left:49%;--fall-time:16s;--fall-delay:-11s}.p8{left:57%;--fall-time:14s;--fall-delay:-7s}.p9{left:64%;--fall-time:18s;--fall-delay:-1s}.p10{left:71%;--fall-time:12s;--fall-delay:-10s}.p11{left:78%;--fall-time:17s;--fall-delay:-4s}.p12{left:85%;--fall-time:13s;--fall-delay:-6s}.p13{left:93%;--fall-time:20s;--fall-delay:-15s}.p14{left:15%;--fall-time:21s;--fall-delay:-16s}.p15{left:38%;--fall-time:18s;--fall-delay:-12s}.p16{left:61%;--fall-time:22s;--fall-delay:-18s}.p17{left:82%;--fall-time:15s;--fall-delay:-9s}.p18{left:97%;--fall-time:19s;--fall-delay:-14s}
+@keyframes particleDrop{0%{transform:translate3d(0,-3vh,0);opacity:0}8%{opacity:1}92%{opacity:1}100%{transform:translate3d(18px,112vh,0);opacity:0}}
+.sky-sun{position:absolute!important;display:block!important;top:-65px!important;color:#ffb900!important;font-family:Arial,sans-serif!important;font-weight:900!important;line-height:1!important;text-shadow:0 0 8px #ffbd22,0 0 18px #ffca3a,0 0 32px #ffb900!important;animation:sunDrop 14s linear infinite!important;will-change:transform!important}
+.sun-one{left:23%!important;font-size:36px!important;animation-duration:15s!important;animation-delay:-7s!important}
+.sun-two{left:73%!important;font-size:27px!important;animation-duration:19s!important;animation-delay:-13s!important}
+body.dark-mode .sky-sun{color:#fff1a8!important;text-shadow:0 0 8px #fff1a8,0 0 20px #f9dc76!important}
+@keyframes sunDrop{0%{transform:translate3d(0,-5vh,0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translate3d(30px,115vh,0) rotate(240deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){.sky-particle,.sky-sun{animation-duration:12s!important;animation-iteration-count:infinite!important}}
 </style>
 </head>
 <body>
-<div class="ambient"><i class="blob a"></i><i class="blob b"></i><i class="blob c"></i><div class="starfield" aria-hidden="true"></div></div>
+<div class="ambient"><i class="blob a"></i><i class="blob b"></i><i class="blob c"></i><div class="starfield" aria-hidden="true"><i class="sky-particle p1"></i><i class="sky-particle p2"></i><i class="sky-particle p3"></i><i class="sky-particle p4"></i><i class="sky-particle p5"></i><i class="sky-particle p6"></i><i class="sky-particle p7"></i><i class="sky-particle p8"></i><i class="sky-particle p9"></i><i class="sky-particle p10"></i><i class="sky-particle p11"></i><i class="sky-particle p12"></i><i class="sky-particle p13"></i><i class="sky-particle p14"></i><i class="sky-particle p15"></i><i class="sky-particle p16"></i><i class="sky-particle p17"></i><i class="sky-particle p18"></i><i class="sky-sun sun-one">☀</i><i class="sky-sun sun-two">☀</i></div></div>
 <div class="app">
 <aside class="rail"><button class="brandmark" id="backTop" title="Back to top">↗</button><nav class="railnav"><button class="navicon active" title="Journey" data-scroll="top">✦</button><button class="navicon" title="Map" data-scroll="mapSection">⌁</button><button class="navicon" title="Stations" data-scroll="stationsSection">▦</button><button class="navicon" title="Uploads" data-scroll="uploadsSection">◈</button></nav><button class="railbottom" id="themeRailToggle" title="Switch light/dark mode" aria-label="Switch light/dark mode">☼</button></aside>
 <main class="main" id="top">
