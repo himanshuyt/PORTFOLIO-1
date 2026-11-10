@@ -346,6 +346,22 @@ body:not(.dark-mode) .sub-check input[type="checkbox"]{background:#fff!important
 body:not(.dark-mode) .sub-check input[type="checkbox"]:checked{background:#54d9b0!important}
 .track-actions .track-done-btn,.track-actions .expand-mark{pointer-events:auto!important;position:relative!important;z-index:20!important;cursor:pointer!important}
 
+
+/* Track interaction and compact per-roadmap storage UI fixes */
+.subtrack-panel{height:auto;max-height:390px;min-height:76px;flex:0 0 auto}
+.subpanel-body{flex:1 1 auto;min-height:0}
+.subpanel-body .inline-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:7px}
+.subpanel-body .inline-sub{min-height:38px}
+.sub-check{cursor:pointer}
+.sub-check input{position:static!important;opacity:1!important;appearance:auto;width:17px!important;height:17px!important;min-width:17px;flex:none;margin:0 1px 0 0;accent-color:#54d9b0;cursor:pointer}
+.sub-check .sub-title{flex:1;min-width:0;line-height:1.3}
+.stop-card{position:relative}
+.stop-edit{position:absolute;right:11px;top:39px;z-index:5;width:27px;height:27px;border:1px solid #ffffff35;border-radius:9px;background:#ffffff16;color:#f2eaff;display:grid;place-items:center;font-size:13px}
+.stop-edit:hover,.milestone-edit:hover{background:#8b68ef;color:#fff}
+.stop-main{padding-right:48px}
+.stationrow{position:relative}
+.milestone-edit{border:1px solid #e9e1f4;background:#f6f1ff;color:#7255b8;border-radius:8px;width:27px;height:27px;flex:none;cursor:pointer}
+@media(max-width:620px){.subpanel-body .inline-list{grid-template-columns:1fr}.subtrack-panel{max-height:48vh}.stop-edit{top:38px}}
 </style>
 </head>
 <body>
@@ -401,14 +417,12 @@ function makeDsaRoadmap(){return {id:'dsa-backend-roadmap',title:'DSA & Backend 
 
 let roadmaps=[],activeRoadmapId=null;
 function copySnapshot(x){return JSON.parse(JSON.stringify(x))}
-function storeActiveRoadmap(){if(!activeRoadmapId)return;const i=roadmaps.findIndex(r=>r.id===activeRoadmapId);if(i>=0)roadmaps[i]={...copySnapshot(data),id:activeRoadmapId}}
+function cleanRoadmap(x){const src=x||{};return {id:src.id||crypto.randomUUID(),title:String(src.title||'Untitled roadmap'),description:String(src.description||''),train:src.train||'🚀',stations:Array.isArray(src.stations)?src.stations.map(st=>({id:st.id||crypto.randomUUID(),name:String(st.name||'Untitled track'),desc:String(st.desc||''),tasks:Array.isArray(st.tasks)?st.tasks.slice():[],link:String(st.link||''),status:['done','active','upcoming'].includes(st.status)?st.status:'upcoming',files:Array.isArray(st.files)?st.files.slice():[],subtracks:Array.isArray(st.subtracks)?st.subtracks.map(x=>({id:x.id||crypto.randomUUID(),title:String(x.title||''),done:!!x.done})):[]})):[],uploads:Array.isArray(src.uploads)?src.uploads.slice():[]}}
+function storeActiveRoadmap(){if(!activeRoadmapId)return;const i=roadmaps.findIndex(r=>r.id===activeRoadmapId),clean=cleanRoadmap(data);clean.id=activeRoadmapId;if(i>=0)roadmaps[i]=clean;else roadmaps.push(clean)}
 function renderRoadmapSelect(){const el=$('roadmapSelect');if(!el)return;el.innerHTML=roadmaps.map(r=>'<option value="'+esc(r.id)+'" '+(r.id===activeRoadmapId?'selected':'')+'>'+esc(r.title)+'</option>').join('');el.value=activeRoadmapId||''}
-async function save(){if(!db)db=await openDB();storeActiveRoadmap();data.roadmaps=copySnapshot(roadmaps);data.activeRoadmapId=activeRoadmapId;return new Promise((ok,no)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(data,KEY);tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}
-async function load(){try{db=await openDB();const old=await new Promise((ok,no)=>{const r=db.transaction(STORE).objectStore(STORE).get(KEY);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
- if(old&&Array.isArray(old.roadmaps)&&old.roadmaps.length){roadmaps=old.roadmaps;const legacyJourney=roadmaps.find(r=>r.id==='my-journey'||/make your next move/i.test(r.title)||/dsa.*backend/i.test(r.title));if(legacyJourney){if(legacyJourney.id!=='dsa-backend-roadmap'&&!roadmaps.some(r=>r.id==='dsa-backend-roadmap'))legacyJourney.id='dsa-backend-roadmap';if(!legacyJourney.title||legacyJourney.title==='Make your next move.')legacyJourney.title='DSA & Backend Journey';}else roadmaps.push(makeDsaRoadmap());if(!roadmaps.some(r=>r.id==='frontend-roadmap'))roadmaps.unshift(makeFrontendRoadmap());activeRoadmapId=old.activeRoadmapId||'frontend-roadmap';data=copySnapshot(roadmaps.find(r=>r.id===activeRoadmapId)||roadmaps[0]);}
- else {const legacy=old?{...data,...old}:copySnapshot(data);delete legacy.roadmaps;delete legacy.activeRoadmapId;const hasFrontend=legacy.title==='Frontend Developer Roadmap'||legacy.stations?.some(s=>s.name==='HTML5'&&s.subtracks?.length);const frontend=hasFrontend?{...legacy,id:'frontend-roadmap'}:makeFrontendRoadmap();roadmaps=hasFrontend?[frontend]:[{...legacy,id:'my-journey',title:legacy.title==='Make your next move.'?'DSA & Backend Journey':legacy.title},frontend];if(!roadmaps.some(r=>r.id==='dsa-backend-roadmap'))roadmaps.push(makeDsaRoadmap());activeRoadmapId=frontend.id;data=copySnapshot(frontend);await save();}
- renderRoadmapSelect();
- }catch(e){toast('Storage unavailable in this browser')}}
+const META_KEY='trackline:meta',ROADMAP_KEY=id=>'trackline:roadmap:'+id;
+async function save(){if(!db)db=await openDB();storeActiveRoadmap();const active=cleanRoadmap(data),meta={version:2,activeRoadmapId,roadmaps:roadmaps.map(r=>({id:r.id,title:r.title}))};return new Promise((ok,no)=>{const tx=db.transaction(STORE,'readwrite'),os=tx.objectStore(STORE);os.put(active,ROADMAP_KEY(activeRoadmapId));os.put(meta,META_KEY);os.put({version:2,activeRoadmapId},KEY);tx.oncomplete=ok;tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error||new Error('Storage transaction aborted'))})}
+async function load(){try{db=await openDB();const read=key=>new Promise((ok,no)=>{const q=db.transaction(STORE).objectStore(STORE).get(key);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)});const meta=await read(META_KEY);if(meta&&Array.isArray(meta.roadmaps)&&meta.roadmaps.length){roadmaps=[];for(const item of meta.roadmaps){const saved=await read(ROADMAP_KEY(item.id));if(saved)roadmaps.push(cleanRoadmap(saved))}activeRoadmapId=roadmaps.some(r=>r.id===meta.activeRoadmapId)?meta.activeRoadmapId:(roadmaps[0]?.id||null)}else{const old=await read(KEY);if(old&&Array.isArray(old.roadmaps)&&old.roadmaps.length){roadmaps=old.roadmaps.map(cleanRoadmap);const legacyJourney=roadmaps.find(r=>r.id==='my-journey'||/make your next move/i.test(r.title)||/dsa.*backend/i.test(r.title));if(legacyJourney){if(legacyJourney.id!=='dsa-backend-roadmap'&&!roadmaps.some(r=>r.id==='dsa-backend-roadmap'))legacyJourney.id='dsa-backend-roadmap';if(!legacyJourney.title||legacyJourney.title==='Make your next move.')legacyJourney.title='DSA & Backend Journey'}else roadmaps.push(makeDsaRoadmap());if(!roadmaps.some(r=>r.id==='frontend-roadmap'))roadmaps.unshift(makeFrontendRoadmap());activeRoadmapId=old.activeRoadmapId||'frontend-roadmap'}else{const legacy=cleanRoadmap(old||data),hasFrontend=legacy.title==='Frontend Developer Roadmap'||legacy.stations.some(s=>s.name==='HTML5'&&s.subtracks.length),frontend=hasFrontend?{...legacy,id:'frontend-roadmap'}:makeFrontendRoadmap();roadmaps=hasFrontend?[frontend]:[{...legacy,id:'my-journey',title:legacy.title==='Make your next move.'?'DSA & Backend Journey':legacy.title},frontend];if(!roadmaps.some(r=>r.id==='dsa-backend-roadmap'))roadmaps.push(makeDsaRoadmap());activeRoadmapId=frontend.id}}if(!roadmaps.some(r=>r.id==='dsa-backend-roadmap'))roadmaps.push(makeDsaRoadmap());if(!roadmaps.some(r=>r.id==='frontend-roadmap'))roadmaps.unshift(makeFrontendRoadmap());if(!activeRoadmapId||!roadmaps.some(r=>r.id===activeRoadmapId))activeRoadmapId=roadmaps[0].id;data=cleanRoadmap(roadmaps.find(r=>r.id===activeRoadmapId));renderRoadmapSelect();await save()}catch(e){console.error(e);toast('Storage unavailable in this browser')}}
 $('roadmapSelect').onchange=async()=>{storeActiveRoadmap();const next=roadmaps.find(r=>r.id===$('roadmapSelect').value);if(!next)return;activeRoadmapId=next.id;data=copySnapshot(next);await save();selectedTrackId=null;render();renderRoadmapSelect();toast('Opened '+data.title)};
 $('createRoadmapBtn').onclick=()=>$('roadmapDialog').showModal();
 $('closeRoadmap').onclick=()=>$('roadmapDialog').close();
@@ -444,11 +458,12 @@ function render(){
  $('totalCount').textContent=n;
  $('remainingCount').textContent=n-done;
  $('stopCount').textContent=n+' STOPS';
- $('milestones').innerHTML=n?data.stations.map(s=>'<button class="stationrow '+s.status+'" data-open="'+esc(s.id)+'">'+trackThumb(s.name,'station-thumb')+'<span class="stationtext"><b>'+esc(s.name)+'</b><small>'+(s.status==='done'?'All clear':s.status==='active'?'In motion':'Up next')+'</small></span><i class="statusdot"></i></button>').join(''):'<div class="empty">Your first stop is waiting ✦</div>';
+ $('milestones').innerHTML=n?data.stations.map(s=>'<div class="stationrow '+s.status+'" data-open="'+esc(s.id)+'">'+trackThumb(s.name,'station-thumb')+'<span class="stationtext"><b>'+esc(s.name)+'</b><small>'+(s.status==='done'?'All clear':s.status==='active'?'In motion':'Up next')+'</small></span><i class="statusdot"></i><button type="button" class="milestone-edit" data-edit-track="'+esc(s.id)+'" aria-label="Edit '+esc(s.name)+'">✎</button></div>').join(''):'<div class="empty">Your first stop is waiting ✦</div>';
  $('journeyResources').innerHTML=(data.uploads||[]).length?data.uploads.map((f,i)=>'<div class="resource"><span class="r-icon">✧</span><span style="min-width:0;flex:1"><b>'+esc(f.name)+'</b><small>'+esc(f.type||'File')+'</small></span><button class="remove" data-remove="'+i+'">×</button></div>').join(''):'<div class="empty">Add photos, clips and inspiration ✧</div>';
  drawMap();
 }
 let selectedTrackId=null;
+function updateTrackCard(s){const card=$('routeTrack').querySelector('[data-stop="'+CSS.escape(s.id)+'"]');if(!card)return;card.classList.remove('done','active','upcoming');card.classList.add(s.status);const status=card.querySelector('.status-label');if(status)status.textContent=s.status==='done'?'COMPLETED':s.status==='active'?'IN PROGRESS':'UP NEXT';const node=card.querySelector('.stop-node');if(node)node.textContent=s.status==='done'?'✓':String(data.stations.indexOf(s)+1).padStart(2,'0');const button=card.querySelector('[data-toggle-track]');if(button){button.classList.toggle('is-done',s.status==='done');button.textContent=s.status==='done'?'✓':'';button.setAttribute('aria-label','Mark '+s.name+' '+(s.status==='done'?'not done':'done'))}}
 function drawMap(){
  const host=$('routeTrack'),panel=$('subtrackPanel');if(!host||!panel)return;
  const total=data.stations.length,done=data.stations.filter(s=>s.status==='done').length;
@@ -458,7 +473,7 @@ function drawMap(){
  host.innerHTML=data.stations.map((s,i)=>{
   s.subtracks=s.subtracks||[];const isOpen=s.id===selectedTrackId,subDone=s.subtracks.filter(x=>x.done).length;
   const status=s.status==='done'?'COMPLETED':s.status==='active'?'IN PROGRESS':'UP NEXT';
-  return '<article class="map-stop '+s.status+(isOpen?' expanded':'')+'" data-stop="'+esc(s.id)+'"><div class="stop-connector"></div><div class="stop-node-wrap"><span class="stop-node">'+(s.status==='done'?'✓':String(i+1).padStart(2,'0'))+'</span></div><div class="stop-card"><button class="stop-main" data-expand="'+esc(s.id)+'" aria-expanded="'+isOpen+'"><span class="stop-meta"><span>TRACK '+String(i+1).padStart(2,'0')+'</span><span class="status-label">'+status+'</span></span>'+trackThumb(s.name,'map-thumb')+'<strong>'+esc(s.name)+'</strong><span class="stop-description">'+esc(s.desc||'A new milestone on your journey')+'</span></button><div class="stop-bottom"><span>'+s.subtracks.length+' SUBTRACKS · '+subDone+'/'+s.subtracks.length+' DONE</span><div class="track-actions"><button type="button" class="track-done-btn '+(s.status==='done'?'is-done':'')+'" data-toggle-track="'+esc(s.id)+'" aria-label="Mark '+esc(s.name)+' '+(s.status==='done'?'not done':'done')+'" title="Toggle completion">'+(s.status==='done'?'✓':'')+'</button><button type="button" class="expand-mark" data-expand="'+esc(s.id)+'" aria-label="Open subtracks">'+(isOpen?'−':'＋')+'</button></div></div></div></article>'
+  return '<article class="map-stop '+s.status+(isOpen?' expanded':'')+'" data-stop="'+esc(s.id)+'"><div class="stop-connector"></div><div class="stop-node-wrap"><span class="stop-node">'+(s.status==='done'?'✓':String(i+1).padStart(2,'0'))+'</span></div><div class="stop-card"><button class="stop-main" type="button" data-expand="'+esc(s.id)+'" aria-expanded="'+isOpen+'"><span class="stop-meta"><span>TRACK '+String(i+1).padStart(2,'0')+'</span><span class="status-label">'+status+'</span></span>'+trackThumb(s.name,'map-thumb')+'<strong>'+esc(s.name)+'</strong><span class="stop-description">'+esc(s.desc||'A new milestone on your journey')+'</span></button><button type="button" class="stop-edit" data-edit-track="'+esc(s.id)+'" aria-label="Edit '+esc(s.name)+'" title="Edit track">✎</button><div class="stop-bottom"><span>'+s.subtracks.length+' SUBTRACKS · '+subDone+'/'+s.subtracks.length+' DONE</span><div class="track-actions"><button type="button" class="track-done-btn '+(s.status==='done'?'is-done':'')+'" data-toggle-track="'+esc(s.id)+'" aria-label="Mark '+esc(s.name)+' '+(s.status==='done'?'not done':'done')+'" title="Toggle completion">'+(s.status==='done'?'✓':'')+'</button><button type="button" class="expand-mark" data-expand="'+esc(s.id)+'" aria-label="Show subtracks">'+(isOpen?'−':'＋')+'</button></div></div></div></article>'
  }).join('');
  const active=data.stations.find(s=>s.id===selectedTrackId);
  if(!active){panel.innerHTML='<div class="subpanel-empty">✦ Select a track above. Its subtracks will appear here without moving the other tracks.</div>';}
@@ -468,9 +483,9 @@ function drawMap(){
  }
  const handleClick=async e=>{
   const btn=e.target.closest('button');if(!btn)return;
-  if(btn.dataset.toggleTrack){e.preventDefault();e.stopPropagation();const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?(target.subtracks?.some(x=>x.done)?'active':'upcoming'):'done';await save();render();}return}
+  if(btn.dataset.toggleTrack){e.preventDefault();e.stopPropagation();const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?(target.subtracks?.some(x=>x.done)?'active':'upcoming'):'done';updateTrackCard(target);updateJourneyProgress();save().catch(err=>{console.error(err);toast('Could not save this change')});}return}
   if(btn.dataset.expand){selectedTrackId=selectedTrackId===btn.dataset.expand?null:btn.dataset.expand;drawMap();return}
-  if(btn.dataset.editTrack){openStation(btn.dataset.editTrack);return}
+  if(btn.dataset.editTrack){e.preventDefault();e.stopPropagation();openStation(btn.dataset.editTrack);return}
   if(btn.dataset.insertBefore||btn.dataset.insertAfter){const id=btn.dataset.insertBefore||btn.dataset.insertAfter,idx=data.stations.findIndex(x=>x.id===id);insertAtIndex(idx+(btn.dataset.insertAfter?1:0));return}
   const card=btn.closest('[data-stop]')||panel,s=data.stations.find(x=>x.id===(card.dataset.stop||selectedTrackId));if(!s)return;
   if(btn.dataset.subdel!==undefined){s.subtracks.splice(+btn.dataset.subdel,1);await save();drawMap();return}
@@ -496,7 +511,7 @@ function drawMap(){
   const count=card.querySelector('.stop-bottom>span');if(count)count.textContent=s.subtracks.length+' SUBTRACKS · '+done+'/'+s.subtracks.length+' DONE';
  }
  const heading=panel.querySelector('.subpanel-head small');if(heading)heading.textContent=done+' of '+s.subtracks.length+' completed · '+s.subtracks.length+' steps';
- await save();updateJourneyProgress();
+ updateJourneyProgress();save().catch(err=>{console.error(err);toast('Could not save this change')});
 };
  panel.onsubmit=async e=>{const form=e.target.closest('[data-add-form]');if(!form)return;e.preventDefault();const s=data.stations.find(x=>x.id===form.dataset.addForm),input=form.elements.subtrack,title=input.value.trim();if(!title)return;s.subtracks=s.subtracks||[];s.subtracks.push({id:crypto.randomUUID(),title,done:false});await save();drawMap()};
 }
@@ -513,7 +528,7 @@ $('deleteStation').onclick=async()=>{if(!editingId||!confirm('Remove this statio
 $('editJourney').onclick=()=>{$('titleInput').value=data.title;$('descInput').value=data.description;$('trainInput').value=data.train;$('journeyDialog').showModal()};$('closeJourney').onclick=()=>$('journeyDialog').close();$('journeyForm').onsubmit=async e=>{e.preventDefault();data.title=$('titleInput').value;data.description=$('descInput').value;data.train=$('trainInput').value||'🚀';await save();render();$('journeyDialog').close();toast('Fresh look saved ✨')};
 $('uploadGeneral').onclick=()=>$('generalFile').click();$('generalFile').onchange=async e=>{for(const f of e.target.files){if(f.size>12*1024*1024){toast('That file is over 12 MB');continue}data.uploads.push({name:f.name,type:f.type,data:await readFile(f)})}await save();render();e.target.value='';toast('Added to your universe ✨')};
 $('journeyResources').onclick=async e=>{const b=e.target.closest('[data-remove]');if(!b)return;data.uploads.splice(+b.dataset.remove,1);await save();render()};
-$('milestones').onclick=e=>{const b=e.target.closest('[data-open]');if(b)openStation(b.dataset.open)};
+$('milestones').onclick=e=>{const edit=e.target.closest('[data-edit-track]');if(edit){e.stopPropagation();openStation(edit.dataset.editTrack);return}const row=e.target.closest('[data-open]');if(!row)return;selectedTrackId=row.dataset.open;drawMap();$('mapSection').scrollIntoView({behavior:'smooth',block:'start'})};
 $('exportBtn').onclick=()=>{const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));a.href=u;a.download='trackline-backup.json';a.click();URL.revokeObjectURL(u);toast('Backup exported')};
 $('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!Array.isArray(v.stations))throw Error();data=v;await save();render();toast('Journey restored')}catch{toast('Invalid backup file')}e.target.value=''};
 $('mapAddBtn').onclick=()=>$('addBtn').click();
