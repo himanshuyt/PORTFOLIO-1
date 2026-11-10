@@ -536,5 +536,59 @@ $('resetBtn').onclick=async()=>{if(!confirm('Restore the sample journey?'))retur
 document.querySelectorAll('[data-scroll]').forEach(b=>b.addEventListener('click',()=>{document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('[data-scroll]').forEach(x=>x.classList.remove('active'));b.classList.add('active')}));
 let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{drawMap()},100)});
 const savedTheme=localStorage.getItem('trackline-theme');if(savedTheme==='dark')document.body.classList.add('dark-mode');const setTheme=dark=>{document.body.classList.toggle('dark-mode',dark);localStorage.setItem('trackline-theme',dark?'dark':'light');$('themeToggle').textContent=dark?'☀':'☾';$('themeRailToggle').textContent=dark?'☀':'☼'};$('themeToggle').textContent=document.body.classList.contains('dark-mode')?'☀':'☾';$('themeRailToggle').textContent=document.body.classList.contains('dark-mode')?'☀':'☼';$('themeToggle').onclick=()=>setTheme(!document.body.classList.contains('dark-mode'));$('themeRailToggle').onclick=()=>setTheme(!document.body.classList.contains('dark-mode'));$('backTop').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});load().then(()=>{renderRoadmapSelect();render()});
+
+/* ROADMAP INTERACTION HOTFIX: delegated controls remain live after roadmap swaps */
+(function(){
+ const route=$('routeTrack'), panel=$('subtrackPanel'), selector=$('roadmapSelect');
+ if(!route||!panel)return;
+ const persist=()=>save().catch(err=>{console.error('Trackline save failed',err);toast('Could not save this change');});
+ const refreshTrack=(s)=>{
+  const card=route.querySelector('[data-stop="'+CSS.escape(s.id)+'"]');
+  if(card){
+   card.classList.remove('done','active','upcoming');card.classList.add(s.status);
+   const st=card.querySelector('.status-label');if(st)st.textContent=s.status==='done'?'COMPLETED':s.status==='active'?'IN PROGRESS':'UP NEXT';
+   const node=card.querySelector('.stop-node');if(node)node.textContent=s.status==='done'?'✓':String(data.stations.indexOf(s)+1).padStart(2,'0');
+   const toggle=card.querySelector('[data-toggle-track]');if(toggle){toggle.classList.toggle('is-done',s.status==='done');toggle.textContent=s.status==='done'?'✓':'';}
+   const count=card.querySelector('.stop-bottom>span');if(count)count.textContent=s.subtracks.length+' SUBTRACKS · '+s.subtracks.filter(x=>x.done).length+'/'+s.subtracks.length+' DONE';
+  }
+  const head=panel.querySelector('.subpanel-head small');if(head)head.textContent=s.subtracks.filter(x=>x.done).length+' of '+s.subtracks.length+' completed · '+s.subtracks.length+' steps';
+  updateJourneyProgress();
+ };
+ const findTrack=id=>data.stations.find(s=>s.id===id);
+ document.addEventListener('click',async e=>{
+  const btn=e.target.closest('#routeTrack button, #subtrackPanel button');if(!btn)return;
+  const id=btn.dataset.toggleTrack||btn.dataset.expand||btn.dataset.editTrack||btn.dataset.insertBefore||btn.dataset.insertAfter||btn.dataset.addForm;
+  const track=findTrack(id)||findTrack(selectedTrackId);
+  const recognized=btn.hasAttribute('data-toggle-track')||btn.hasAttribute('data-expand')||btn.hasAttribute('data-edit-track')||btn.hasAttribute('data-insert-before')||btn.hasAttribute('data-insert-after')||btn.hasAttribute('data-subdel')||btn.hasAttribute('data-subedit')||btn.hasAttribute('data-subup')||btn.hasAttribute('data-subdown');
+  if(!recognized)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(btn.dataset.toggleTrack){const s=findTrack(btn.dataset.toggleTrack);if(!s)return;s.status=s.status==='done'?(s.subtracks.some(x=>x.done)?'active':'upcoming'):'done';refreshTrack(s);persist();return;}
+  if(btn.dataset.expand){selectedTrackId=selectedTrackId===btn.dataset.expand?null:btn.dataset.expand;drawMap();return;}
+  if(btn.dataset.editTrack){openStation(btn.dataset.editTrack);return;}
+  if(btn.dataset.insertBefore||btn.dataset.insertAfter){const target=findTrack(btn.dataset.insertBefore||btn.dataset.insertAfter);if(!target)return;insertAtIndex(data.stations.indexOf(target)+(btn.dataset.insertAfter?1:0));return;}
+  if(!track)return;
+  if(btn.dataset.subdel!==undefined){track.subtracks.splice(Number(btn.dataset.subdel),1);drawMap();persist();return;}
+  if(btn.dataset.subedit!==undefined){const k=Number(btn.dataset.subedit),v=prompt('Rename subtrack',track.subtracks[k]?.title||'');if(v&&v.trim()){track.subtracks[k].title=v.trim();drawMap();persist();}return;}
+  if(btn.dataset.subup!==undefined||btn.dataset.subdown!==undefined){const k=Number(btn.dataset.subup??btn.dataset.subdown),n=btn.dataset.subup!==undefined?k-1:k+1;if(n>=0&&n<track.subtracks.length){[track.subtracks[k],track.subtracks[n]]=[track.subtracks[n],track.subtracks[k]];drawMap();persist();}return;}
+ },true);
+ document.addEventListener('change',e=>{
+  const input=e.target.closest('#subtrackPanel input[data-subtoggle][data-parent-track]');if(!input)return;
+  e.stopImmediatePropagation();const s=findTrack(input.dataset.parentTrack);if(!s)return;
+  const sub=s.subtracks[Number(input.dataset.subtoggle)];if(!sub)return;
+  sub.done=input.checked;s.status=s.subtracks.length&&s.subtracks.every(x=>x.done)?'done':s.subtracks.some(x=>x.done)?'active':'upcoming';
+  refreshTrack(s);const label=input.closest('.sub-check');if(label)label.classList.toggle('is-done',sub.done);persist();
+ },true);
+ document.addEventListener('submit',e=>{
+  const form=e.target.closest('#subtrackPanel form[data-add-form]');if(!form)return;
+  e.preventDefault();e.stopImmediatePropagation();const s=findTrack(form.dataset.addForm),input=form.elements.subtrack,title=input.value.trim();if(!s||!title)return;
+  s.subtracks.push({id:crypto.randomUUID(),title,done:false});drawMap();persist();
+ },true);
+ if(selector)selector.onchange=()=>{
+  storeActiveRoadmap();const next=roadmaps.find(r=>r.id===selector.value);if(!next)return;
+  activeRoadmapId=next.id;data=copySnapshot(next);selectedTrackId=null;renderRoadmapSelect();render();
+  persist();toast('Opened '+data.title);
+ };
+})();
+
 </script>
 </body></html>
