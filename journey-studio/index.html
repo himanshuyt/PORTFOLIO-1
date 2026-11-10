@@ -78,6 +78,20 @@ function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open(DB_NAME,1)
 async function save(){if(!db)db=await openDB();return new Promise((ok,no)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(data,KEY);tx.oncomplete=ok;tx.onerror=()=>no(tx.error)})}
 async function load(){try{db=await openDB();const old=await new Promise((ok,no)=>{const r=db.transaction(STORE).objectStore(STORE).get(KEY);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});if(old)data={...data,...old};}catch(e){toast('Storage unavailable in this browser')}}
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2200)}
+function render(){
+ const n=data.stations.length,done=data.stations.filter(s=>s.status==='done').length,pct=n?Math.round(done/n*100):0;
+ $('journeyTitle').innerHTML=esc(data.title).replace(/\n/g,'<br>');
+ $('journeyDesc').textContent=data.description;
+ $('percent').innerHTML=pct+'<span>%</span>';
+ $('barFill').style.width=pct+'%';
+ $('doneCount').textContent=done;
+ $('totalCount').textContent=n;
+ $('remainingCount').textContent=n-done;
+ $('stopCount').textContent=n+' STOPS';
+ $('milestones').innerHTML=n?data.stations.map(s=>'<button class="stationrow '+s.status+'" data-open="'+esc(s.id)+'"><span class="stationico">'+(s.status==='done'?'✓':s.status==='active'?'✦':'◇')+'</span><span class="stationtext"><b>'+esc(s.name)+'</b><small>'+(s.status==='done'?'All clear':s.status==='active'?'In motion':'Up next')+'</small></span><i class="statusdot"></i></button>').join(''):'<div class="empty">Your first stop is waiting ✦</div>';
+ $('journeyResources').innerHTML=(data.uploads||[]).length?data.uploads.map((f,i)=>'<div class="resource"><span class="r-icon">✧</span><span style="min-width:0;flex:1"><b>'+esc(f.name)+'</b><small>'+esc(f.type||'File')+'</small></span><button class="remove" data-remove="'+i+'">×</button></div>').join(''):'<div class="empty">Add photos, clips and inspiration ✧</div>';
+ drawMap();
+}
 let selectedTrackId=null;
 function drawMap(){
  const host=$('routeTrack');if(!host)return;
