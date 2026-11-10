@@ -98,6 +98,78 @@ body:not(.dark-mode) .subpanel-body .inline-add input{background:#fff;color:#302
 body:not(.dark-mode) .starfield{opacity:.38;background-image:radial-gradient(2px 2px at 8% 18%,#f3bd36 99%,transparent),radial-gradient(1.5px 1.5px at 22% 72%,#e9a927 99%,transparent),radial-gradient(2px 2px at 38% 34%,#ffd45a 99%,transparent),radial-gradient(1.5px 1.5px at 54% 83%,#e8b83d 99%,transparent),radial-gradient(2px 2px at 72% 22%,#f3bd36 99%,transparent),radial-gradient(1.5px 1.5px at 88% 61%,#e9a927 99%,transparent)}
 @media(max-width:900px){.route-track{height:235px}.subpanel-body .inline-list{grid-template-columns:1fr 1fr}}
 @media(max-width:620px){.route-track{height:218px;max-height:none!important;min-height:0!important;overflow-x:auto!important;overflow-y:hidden!important}.map-stop{flex-basis:240px}.subtrack-panel{max-height:270px;margin:4px 2px 10px;padding:10px}.subpanel-body .inline-list{grid-template-columns:1fr}.subpanel-head b{font-size:12px}}
+
+/* FINAL LAYOUT PASS — independent subtrack drawer, predictable page scrolling */
+html{scroll-behavior:auto!important}
+body{overflow-y:auto!important;overscroll-behavior-y:auto!important}
+.app,.main{min-height:0!important;overflow:visible!important}
+.route-track{
+ display:flex!important;flex-flow:row nowrap!important;align-items:stretch!important;
+ height:258px!important;min-height:258px!important;max-height:258px!important;
+ overflow-x:auto!important;overflow-y:hidden!important;
+ overscroll-behavior-x:contain!important;overscroll-behavior-y:auto!important;
+ touch-action:pan-x pan-y!important;scrollbar-width:thin;
+ padding:22px 8px 14px!important;gap:14px!important;
+}
+.map-stop{flex:0 0 252px!important;height:100%!important;min-height:0!important;align-self:stretch!important}
+.stop-card{position:relative!important;height:100%!important;min-height:0!important;display:block!important;overflow:hidden!important}
+.stop-main{display:block!important;width:100%!important;height:100%!important;min-height:0!important;padding:15px 14px 54px!important;text-align:left!important}
+.stop-bottom{margin-top:10px!important}
+.track-actions{
+ position:absolute!important;right:11px!important;bottom:10px!important;
+ display:flex!important;flex-direction:row!important;align-items:center!important;
+ justify-content:flex-end!important;gap:7px!important;padding:0!important;
+ width:auto!important;height:30px!important;z-index:5!important;
+}
+.track-done-btn,.expand-mark{
+ position:static!important;display:grid!important;place-items:center!important;
+ width:29px!important;height:29px!important;min-width:29px!important;
+ border-radius:10px!important;flex:none!important;margin:0!important;
+}
+.track-done-btn{border:1.5px solid #b8a8dc!important;background:#ffffff0c!important;color:transparent!important}
+.track-done-btn:before{width:9px!important;height:5px!important;border-left:2px solid currentColor!important;border-bottom:2px solid currentColor!important}
+.track-done-btn.is-done{background:#5be0b5!important;border-color:#5be0b5!important;color:#123b35!important;box-shadow:0 0 0 3px #5be0b526!important}
+.expand-mark{border:1px solid #ffffff20!important;background:#ffffff13!important;color:#f5edff!important;font-size:17px!important}
+.subtrack-panel{
+ height:276px!important;min-height:276px!important;max-height:276px!important;
+ display:flex!important;flex-direction:column!important;overflow:hidden!important;
+ margin:10px 5px 12px!important;padding:13px 15px!important;
+ contain:layout paint!important;
+}
+.subpanel-head{flex:0 0 auto!important}
+.subpanel-body{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important}
+.subpanel-body .inline-list{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.subpanel-empty{flex:1!important;min-height:0!important}
+.route-foot{min-height:45px!important}
+.route-track::-webkit-scrollbar{height:7px;width:0!important}
+.route-track::-webkit-scrollbar:vertical{display:none!important}
+.route-track::-webkit-scrollbar-thumb{background:#78659e;border-radius:99px}
+.track-actions button{transform:none!important}
+.track-actions button:hover{filter:brightness(1.18)}
+/* Scroll the page normally while the pointer is over the roadmap; only horizontal gestures move tracks. */
+.route-track{overscroll-behavior: auto!important}
+@media(max-width:900px){
+ .route-track{height:250px!important;min-height:250px!important;max-height:250px!important}
+ .subtrack-panel{height:258px!important;min-height:258px!important;max-height:258px!important}
+ .subpanel-body .inline-list{grid-template-columns:1fr!important}
+}
+@media(max-width:620px){
+ .route-track{height:230px!important;min-height:230px!important;max-height:230px!important;padding:16px 5px 12px!important}
+ .map-stop{flex-basis:236px!important}
+ .subtrack-panel{height:270px!important;min-height:270px!important;max-height:270px!important;margin:8px 2px 10px!important;padding:10px!important}
+ .subpanel-body .inline-list{grid-template-columns:1fr!important}
+ .track-actions{right:9px!important;bottom:8px!important}
+}
+/* Keep the page light on the GPU: static star dots with a gentle opacity twinkle. */
+.starfield{background-position:0 0!important;animation:starTwinkle 5s ease-in-out infinite alternate!important;will-change:opacity!important}
+body:not(.dark-mode) .starfield{background-position:0 0!important;animation:starTwinkle 5.5s ease-in-out infinite alternate!important}
+.blob{filter:blur(48px)!important;will-change:opacity!important}
+.brandmark{background:linear-gradient(135deg,#ff76bf,#9b78ff 58%,#54d9ff)!important;color:#20133c!important;box-shadow:0 10px 28px #9d65f04a!important}
+.navicon{background:#ffffff0b!important;border:1px solid #ffffff14!important;transition:background .18s,border-color .18s,transform .18s!important}
+.navicon.active{background:linear-gradient(135deg,#8255ff,#b05de0)!important;color:white!important;border-color:#c7a5ff!important;box-shadow:0 8px 22px #8955ff45!important}
+.avatar{background:linear-gradient(135deg,#ffbd69,#ff6fb1 55%,#9b7aff)!important;box-shadow:0 6px 18px #9b65ef38!important}
+.railbottom{color:#ffe08a!important;font-size:22px!important}
+body.dark-mode .railbottom{color:#e9e2ff!important}
 </style>
 </head>
 <body>
