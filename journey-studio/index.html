@@ -335,6 +335,17 @@ body:not(.dark-mode) .station-subtrack-editor .subname{color:#30214d}
 .subpanel-body .inline-sub{min-height:38px!important}
 @media(max-width:900px){.subtrack-panel{height:210px!important;min-height:210px!important;max-height:210px!important}}
 @media(max-width:620px){.stop-bottom{margin-left:9px!important;margin-right:9px!important}.stop-bottom>span{font-size:7px!important}.track-actions{gap:5px!important}.track-actions .track-done-btn,.track-actions .expand-mark{width:27px!important;height:27px!important;min-width:27px!important}}
+/* FIX: visible, clickable native subtrack checkboxes */
+.sub-check{position:relative!important;display:flex!important;align-items:center!important;gap:9px!important;cursor:pointer!important;min-width:0!important}
+.sub-check input[type="checkbox"]{position:static!important;opacity:1!important;appearance:none!important;-webkit-appearance:none!important;display:grid!important;place-content:center!important;flex:0 0 19px!important;width:19px!important;height:19px!important;margin:0!important;border:1.7px solid #a997ce!important;border-radius:6px!important;background:#17102f!important;cursor:pointer!important;z-index:2!important}
+.sub-check input[type="checkbox"]::before{content:"✓";font-size:13px;font-weight:900;color:#123b35;transform:scale(0);transition:transform .12s ease}
+.sub-check input[type="checkbox"]:checked{background:#54d9b0!important;border-color:#8df6d7!important}
+.sub-check input[type="checkbox"]:checked::before{transform:scale(1)}
+.sub-check .fake-check{display:none!important}
+body:not(.dark-mode) .sub-check input[type="checkbox"]{background:#fff!important;border-color:#9c8bb9!important}
+body:not(.dark-mode) .sub-check input[type="checkbox"]:checked{background:#54d9b0!important}
+.track-actions .track-done-btn,.track-actions .expand-mark{pointer-events:auto!important;position:relative!important;z-index:20!important;cursor:pointer!important}
+
 </style>
 </head>
 <body>
@@ -453,11 +464,11 @@ function drawMap(){
  if(!active){panel.innerHTML='<div class="subpanel-empty">✦ Select a track above. Its subtracks will appear here without moving the other tracks.</div>';}
  else{
   const subs=active.subtracks||[];
-  panel.innerHTML='<div class="subpanel-head"><div><b>✦ '+esc(active.name)+' · Subtracks</b><small>'+subs.filter(x=>x.done).length+' of '+subs.length+' completed · '+subs.length+' steps</small></div><button class="edit-track" data-edit-track="'+esc(active.id)+'">Edit track ↗</button></div><div class="subpanel-body"><div class="inline-list">'+(subs.length?subs.map((x,j)=>'<div class="inline-sub" data-subrow="'+j+'"><label class="sub-check '+(x.done?'is-done':'')+'"><input type="checkbox" data-subtoggle="'+j+'" data-parent-track="'+esc(active.id)+'" '+(x.done?'checked':'')+'><span class="fake-check">'+(x.done?'✓':'')+'</span><span class="sub-title">'+esc(x.title)+'</span></label><div class="sub-actions"><button data-subup="'+j+'" title="Move up" '+(j===0?'disabled':'')+'>↑</button><button data-subdown="'+j+'" title="Move down" '+(j===subs.length-1?'disabled':'')+'>↓</button><button data-subedit="'+j+'" title="Rename">✎</button><button data-subdel="'+j+'" title="Delete">×</button></div></div>').join(''):'<div class="inline-empty">No subtracks yet.</div>')+'</div><form class="inline-add" data-add-form="'+esc(active.id)+'"><input name="subtrack" maxlength="80" placeholder="Add a subtrack…" autocomplete="off"><button type="submit">＋ Add step</button></form><div class="inline-track-actions"><button data-insert-before="'+esc(active.id)+'">＋ Insert track before</button><button data-insert-after="'+esc(active.id)+'">＋ Insert track after</button></div></div>';
+  panel.innerHTML='<div class="subpanel-head"><div><b>✦ '+esc(active.name)+' · Subtracks</b><small>'+subs.filter(x=>x.done).length+' of '+subs.length+' completed · '+subs.length+' steps</small></div><button class="edit-track" data-edit-track="'+esc(active.id)+'">Edit track ↗</button></div><div class="subpanel-body"><div class="inline-list">'+(subs.length?subs.map((x,j)=>'<div class="inline-sub" data-subrow="'+j+'"><label class="sub-check '+(x.done?'is-done':'')+'"><input type="checkbox" data-subtoggle="'+j+'" data-parent-track="'+esc(active.id)+'" aria-label="Mark '+esc(x.title)+' complete" '+(x.done?'checked':'')+' ><span class="sub-title">'+esc(x.title)+'</span></label><div class="sub-actions"><button data-subup="'+j+'" title="Move up" '+(j===0?'disabled':'')+'>↑</button><button data-subdown="'+j+'" title="Move down" '+(j===subs.length-1?'disabled':'')+'>↓</button><button data-subedit="'+j+'" title="Rename">✎</button><button data-subdel="'+j+'" title="Delete">×</button></div></div>').join(''):'<div class="inline-empty">No subtracks yet.</div>')+'</div><form class="inline-add" data-add-form="'+esc(active.id)+'"><input name="subtrack" maxlength="80" placeholder="Add a subtrack…" autocomplete="off"><button type="submit">＋ Add step</button></form><div class="inline-track-actions"><button data-insert-before="'+esc(active.id)+'">＋ Insert track before</button><button data-insert-after="'+esc(active.id)+'">＋ Insert track after</button></div></div>';
  }
  const handleClick=async e=>{
   const btn=e.target.closest('button');if(!btn)return;
-  if(btn.dataset.toggleTrack){const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?'upcoming':'done';await save();render()}return}
+  if(btn.dataset.toggleTrack){e.preventDefault();e.stopPropagation();const target=data.stations.find(x=>x.id===btn.dataset.toggleTrack);if(target){target.status=target.status==='done'?(target.subtracks?.some(x=>x.done)?'active':'upcoming'):'done';await save();render();}return}
   if(btn.dataset.expand){selectedTrackId=selectedTrackId===btn.dataset.expand?null:btn.dataset.expand;drawMap();return}
   if(btn.dataset.editTrack){openStation(btn.dataset.editTrack);return}
   if(btn.dataset.insertBefore||btn.dataset.insertAfter){const id=btn.dataset.insertBefore||btn.dataset.insertAfter,idx=data.stations.findIndex(x=>x.id===id);insertAtIndex(idx+(btn.dataset.insertAfter?1:0));return}
@@ -474,7 +485,7 @@ function drawMap(){
  sub.done=input.checked;
  s.status=s.subtracks.length&&s.subtracks.every(x=>x.done)?'done':s.subtracks.some(x=>x.done)?'active':'upcoming';
  const row=input.closest('.inline-sub'),label=input.closest('.sub-check');
- if(label){label.classList.toggle('is-done',sub.done);const tick=label.querySelector('.fake-check');if(tick)tick.textContent=sub.done?'✓':''}
+ if(label){label.classList.toggle('is-done',sub.done)}
  const done=s.subtracks.filter(x=>x.done).length;
  const card=host.querySelector('[data-stop="'+CSS.escape(s.id)+'"]');
  if(card){
