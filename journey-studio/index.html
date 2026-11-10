@@ -223,6 +223,48 @@ body:not(.dark-mode) .starfield:after{left:76%;top:-210px;font-size:12px;animati
 body:not(.dark-mode) .starfield{background-position:0 0;animation:tracklineSunFall 32s linear infinite!important}
 body:not(.dark-mode) .starfield:before{animation:tracklineSunGlyphFall 19s linear infinite!important}
 body:not(.dark-mode) .starfield:after{animation:tracklineSunGlyphFall 25s linear -8s infinite!important}
+
+/* User-requested ambient motion: keep the sky moving even when the OS asks
+   to reduce motion. This only overrides the decorative background, not UI motion. */
+.starfield{
+ position:fixed!important;inset:0!important;z-index:0!important;
+ opacity:.72!important;
+ background-position:0 0!important;
+ animation:tracklineStarFall 14s linear infinite!important;
+}
+body:not(.dark-mode) .starfield{
+ background-position:0 0!important;
+ animation:tracklineSunFall 17s linear infinite!important;
+}
+body:not(.dark-mode) .starfield:before{
+ position:fixed!important;left:18%!important;top:-28px!important;
+ animation:tracklineSunGlyphFall 13s linear infinite!important;
+}
+body:not(.dark-mode) .starfield:after{
+ position:fixed!important;left:76%!important;top:-160px!important;
+ animation:tracklineSunGlyphFall 18s linear -6s infinite!important;
+}
+@keyframes tracklineStarFall{
+ from{background-position:0 0}
+ to{background-position:0 540px}
+}
+@keyframes tracklineSunFall{
+ from{background-position:0 0}
+ to{background-position:0 540px}
+}
+@keyframes tracklineSunGlyphFall{
+ 0%{transform:translate3d(0,-20px,0) rotate(0deg);opacity:0}
+ 12%{opacity:1}
+ 88%{opacity:.9}
+ 100%{transform:translate3d(35px,110vh,0) rotate(260deg);opacity:0}
+}
+/* Explicitly preserve the requested decorative drift on reduced-motion systems. */
+@media(prefers-reduced-motion:reduce){
+ .starfield{animation-duration:14s!important;animation-iteration-count:infinite!important}
+ body:not(.dark-mode) .starfield{animation-duration:17s!important}
+ body:not(.dark-mode) .starfield:before{animation-duration:13s!important}
+ body:not(.dark-mode) .starfield:after{animation-duration:18s!important}
+}
 </style>
 </head>
 <body>
